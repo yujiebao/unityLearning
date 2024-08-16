@@ -14,7 +14,7 @@ public class Playercontrol : MonoBehaviour
     [SerializeField] 
     private float mouseSensitivity = 10f;
     private float eyesAngleLimit; 
-    private Camera playerEyes;
+    [SerializeField]private Camera playerEyes;
     private Vector3 jumpVector3;
     [SerializeField]
     private float jumpForce = 6f;
@@ -22,21 +22,30 @@ public class Playercontrol : MonoBehaviour
     private bool isOnGround = true;
     [SerializeField] private GameObject groundCheck;
     [SerializeField] private LayerMask layerMask;
-    private MyInputActions inputActions;
-
+    private MyInputActions inputActions;    //玩家移动
+    private InputAction scrollAction;
+    [SerializeField] private Animator animator;
+    [SerializeField] private GameObject[] guns;
+    private int selectedWeapon = 0;
     void Start()
     {
         controller = GetComponent<CharacterController>();
-        playerEyes = FindObjectOfType<Camera>();
+        // playerEyes = FindObjectOfType<Camera>();
         inputActions = new MyInputActions();
         inputActions.Enable();
+
+        scrollAction = new InputAction("scroll",binding:"<Mouse>/scroll");
+        scrollAction.Enable();
+
     }
 
     void Update()
     {
+        animator = guns[selectedWeapon].GetComponent<Animator>();   //使用数组确定使用的武器使用的动画  也可写在SwitchWeapon中
         float horizontalInput = inputActions.Player.Move.ReadValue<Vector2>().x;
         float verticalInput = inputActions.Player.Move.ReadValue<Vector2>().y;
-        Vector3 moveDirection = transform.forward * verticalInput + transform.right * horizontalInput;  
+        Vector3 moveDirection = transform.forward * verticalInput + transform.right * horizontalInput; 
+        animator.SetFloat("Speed",Math.Abs(horizontalInput)+Math.Abs(verticalInput));
         controller.Move(moveDirection * Time.deltaTime * moveSpeed);
 
         float mouseX = inputActions.Player.Look.ReadValue<Vector2>().x;   
@@ -57,6 +66,87 @@ public class Playercontrol : MonoBehaviour
             jumpVector3.y += gravity * Time.deltaTime;   
         }
 
-        controller.Move(jumpVector3 * Time.deltaTime); 
+        controller.Move(jumpVector3 * Time.deltaTime);
+
+        // /// <summary>
+        // /// 滑动滚轮        
+        // /// </summary>
+        // float scrollValue = scrollAction.ReadValue<Vector2>().y;
+        // if(scrollValue > 0)   //向下滚动
+        // {
+        //     selectedWeapon = (selectedWeapon+1)%guns.Length;
+        //     // Debug.Log("    " + selectedWeapon);
+        //     // selectedWeapon++;
+        //     // if(scrollValue == guns.Length)
+        //     // {
+        //     //     selectedWeapon = 0 ;
+        //     // }
+        // //    SwitchWeapon();
+          
+        // }
+        // else if(scrollValue < 0)//向上滚动
+        // {
+        //      selectedWeapon = (selectedWeapon+guns.Length-1)%guns.Length;
+        //     //  Debug.Log("    " + selectedWeapon);
+        //     // selectedWeapon--;
+        //     // if(scrollValue == -1)
+        //     // {
+        //     //     selectedWeapon = guns.Length - 1 ;
+        //     // }
+        //     //  SwitchWeapon();
+        // }
+        SwitchWeapon();
+    } 
+    
+    void SwitchWeapon()
+    {
+        
+       /// <summary>
+        /// 滑动滚轮        
+        /// </summary>
+        float scrollValue = scrollAction.ReadValue<Vector2>().y;
+        
+        if(scrollValue != 0)
+        {
+            Gun nowGun = guns[selectedWeapon].GetComponent<Gun>();
+            nowGun.isReloading = false;
+        }
+        
+        if(scrollValue > 0)   //向下滚动
+        {
+            selectedWeapon = (selectedWeapon+1)%guns.Length;
+            // Debug.Log("    " + selectedWeapon);
+            // selectedWeapon++;
+            // if(scrollValue == guns.Length) 
+            // {
+            //     selectedWeapon = 0 ;
+            // }
+        //    SwitchWeapon();
+        }
+        else if(scrollValue < 0)//向上滚动
+        {
+             selectedWeapon = (selectedWeapon+guns.Length-1)%guns.Length;
+            //  Debug.Log("    " + selectedWeapon);
+            // selectedWeapon--;
+            // if(scrollValue == -1)
+            // {
+            //     selectedWeapon = guns.Length - 1 ;
+            // }
+            //  SwitchWeapon();
+        }
+        for(int i = 0; i < guns.Length; i++)
+        {
+            if(i == selectedWeapon)
+            {
+                guns[i].SetActive(true);
+            }
+            else
+            {
+                guns[i].SetActive(false);
+            }
+            // guns[i].SetActive(false);
+        }
+        // guns[selectedWeapon].SetActive(true);
+        // animator = guns[selectedWeapon].GetComponent<Animator>();
     }
 }
