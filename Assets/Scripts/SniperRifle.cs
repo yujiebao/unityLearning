@@ -29,8 +29,6 @@ public class SniperRifle : Gun
        {
          StartCoroutine(OnScope(false));
        }
-
-
    }
    IEnumerator OnScope(bool isScope)
    {   

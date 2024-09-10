@@ -3,7 +3,6 @@ using System.Collections;
 using System.Collections.Generic;
 using TMPro;
 using Unity.VisualScripting;
-using UnityEditor.Animations;
 using UnityEngine;
 using UnityEngine.InputSystem;
 
@@ -19,14 +18,16 @@ public class Gun : MonoBehaviour
     private int currentAmmo;   //当前弹夹剩余子弹数
     [SerializeField] private int maxAmmo;  //弹夹容量
     [SerializeField] private int magazineAmmo;  //总弹药
+    [SerializeField] private float damageAmout = 10;
     // [SerializeField] private AudioSource audioSource;
     // [SerializeField] private AudioClip shootSound;
     // private Camera eye;
     private InputAction shootAction;
+    private InputAction ReloadAction;
     private float nextTimeToShoot = 0f;
-    protected Animator animator;
+    [SerializeField]protected Animator animator;
     public bool isReloading = false;
-    public  int a = 1;
+    // public  int a = 1;
     // Start is calletd before the first frame update
     // private void OnEnable()
     // {
@@ -42,19 +43,29 @@ public class Gun : MonoBehaviour
     //     currentAmmo = maxAmmo;//初始化弹夹
     // }
     
+    private void OnEnable() {
+         isReloading = false;
+          animator.SetBool("Reload", false);
+    }
+
      protected void Start() {
-        animator = GetComponent<Animator>();
+        // animator = GetComponent<Animator>();
       //新输入系统绑定按钮
         shootAction = new InputAction("Shoot",binding:"<mouse>/leftButton");
-        shootAction .AddBinding("<Gamepad>/x");
+        shootAction.AddBinding("<Gamepad>/x");
         shootAction.Enable(); 
+        ReloadAction = new InputAction("Reload",binding:"<keyboard>/R");
+        ReloadAction.Enable();
         // eye = FindAnyObjectByType<Camera>();
         currentAmmo = maxAmmo;//初始化弹夹  
     }
     // Update is called once per frame
     protected void Update()
     {
-
+        if(ReloadAction.triggered)
+        {
+          StartCoroutine(Reload());
+        }
         AmmoInfo.text = currentAmmo+"/"+magazineAmmo;
         animator.SetBool("Shoot",shootAction.IsPressed());    //此语句必须放在if外面，if（69行）里面shootAction.IsPressed()恒为true  此类语句注意逻辑。
                                                               //且应该放在Reload代码前，避免修改Reload时的射击操作  或者可以将设置射击操作函数放在弹夹为零的else，避免换弹时射击动作
@@ -103,8 +114,8 @@ public class Gun : MonoBehaviour
         // magazineAmmo -= maxAmmo;
         if(magazineAmmo >= maxAmmo)
         {
+          magazineAmmo = magazineAmmo-maxAmmo+currentAmmo;   //减数是缺少的量，即弹夹量-剩余量
           currentAmmo = maxAmmo;   //设置isReloading之前更改currentAmmo避免一直进行换弹操作
-          magazineAmmo -= maxAmmo;
         }
         else
         {
@@ -119,12 +130,20 @@ public class Gun : MonoBehaviour
          muzzleFlash.Play();
          currentAmmo--;
          RaycastHit hitInfo;
+         LayerMask playerLayer = LayerMask.GetMask("Player");
         //  if(Physics.Raycast(eye.transform.position,eye.transform.forward,out hitInfo,shootRange))
-         if(Physics.Raycast(Camera.main.transform.position,Camera.main.transform.forward,out hitInfo,shootRange))
+         if(Physics.Raycast(Camera.main.transform.position,Camera.main.transform.forward,out hitInfo,shootRange,~playerLayer))
           {
             if(hitInfo.rigidbody)
             {
                 hitInfo.rigidbody.AddForce(Muzzle.transform.forward * shootForce);  //施加力先获取刚体
+            }
+
+            //调用TakeDamage方法
+            if(hitInfo.transform.GetComponent<Enemy>())   //击中的物体是否包含Enemy脚本
+            {
+              hitInfo.transform.GetComponent<Enemy>().TakeDamage(damageAmout);
+              return;
             }
             Instantiate(impactEffect,hitInfo.point,Quaternion.LookRotation(hitInfo.normal),hitInfo.transform);   //平面垂直于法线
             // Instantiate(impactEffect,hitInfo.point,Quaternion.LookRotation(hitInfo.normal),hitInfo.transform); 
